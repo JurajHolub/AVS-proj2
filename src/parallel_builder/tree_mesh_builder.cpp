@@ -40,8 +40,9 @@ unsigned TreeMeshBuilder::traverseOctet(Vec3_t<float> &pos, const ParametricScal
         }
         for (size_t i=0; i < 8; i++)
         {
-            pos.x = x + (X_MASK & i) * halfCubeGrid;
-            pos.y = y + (Y_MASK & i) * halfCubeGrid;
+            //std::cout << ((X_MASK & i)>>2) << ((Y_MASK & i)>>1) << (Z_MASK & i) << "\n";
+            pos.x = x + ((X_MASK & i)>>2) * halfCubeGrid;
+            pos.y = y + ((Y_MASK & i)>>1) * halfCubeGrid;
             pos.z = z + (Z_MASK & i) * halfCubeGrid;
             totalTriangles += traverseOctet(pos, field, halfCubeGrid);
         }
@@ -64,7 +65,7 @@ unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field)
     unsigned totalTriangles = 0;
 
     Vec3_t<float> cubeOffset(0, 0, 0);
-    #pragma omp parallel schedule(guided, 32)
+
     totalTriangles = traverseOctet(cubeOffset, field, mGridSize);
 
     return totalTriangles;
