@@ -64,6 +64,7 @@ unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field)
     unsigned totalTriangles = 0;
 
     Vec3_t<float> cubeOffset(0, 0, 0);
+    #pragma omp parallel schedule(guided, 32)
     totalTriangles = traverseOctet(cubeOffset, field, mGridSize);
 
     return totalTriangles;
