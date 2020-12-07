@@ -1,7 +1,7 @@
 /**
  * @file    tree_mesh_builder.cpp
  *
- * @author  FULL NAME <xlogin00@stud.fit.vutbr.cz>
+ * @author  Juraj Holub <xholub40@stud.fit.vutbr.cz>
  *
  * @brief   Parallel Marching Cubes implementation using OpenMP tasks + octree early elimination
  *
@@ -44,14 +44,23 @@ unsigned TreeMeshBuilder::traverseOctet(Vec3_t<float> &pos, const ParametricScal
             pos.x = x + ((X_MASK & i)>>2) * halfCubeGrid;
             pos.y = y + ((Y_MASK & i)>>1) * halfCubeGrid;
             pos.z = z + (Z_MASK & i) * halfCubeGrid;
-            totalTriangles += traverseOctet(pos, field, halfCubeGrid);
+
+            #pragma omp task shared(totalTriangles)
+            {
+                unsigned taskRes = traverseOctet(pos, field, halfCubeGrid);
+                #pragma omp atomic
+                totalTriangles += taskRes;
+            }
         }
     }
     else // lowest level
     {
-        totalTriangles += buildCube(pos, field);
+        unsigned buildCubeRes = buildCube(pos, field);
+        #pragma omp atomic
+        totalTriangles += buildCubeRes;
     }
 
+    #pragma omp taskwait
     return totalTriangles;
 }
 
@@ -66,7 +75,13 @@ unsigned TreeMeshBuilder::marchCubes(const ParametricScalarField &field)
 
     Vec3_t<float> cubeOffset(0, 0, 0);
 
-    totalTriangles = traverseOctet(cubeOffset, field, mGridSize);
+    #pragma omp parallel
+    {
+        #pragma omp master
+        {
+            totalTriangles = traverseOctet(cubeOffset, field, mGridSize);
+        }
+    }
 
     return totalTriangles;
 }
@@ -106,5 +121,8 @@ void TreeMeshBuilder::emitTriangle(const BaseMeshBuilder::Triangle_t &triangle)
     // Store generated triangle into vector (array) of generated triangles.
     // The pointer to data in this array is return by "getTrianglesArray(...)" call
     // after "marchCubes(...)" call ends.
-    mTriangles.push_back(triangle);
+    #pragma omp critical(TREE_BUILDER_LOCK)
+    {
+        mTriangles.push_back(triangle);
+    }
 }
