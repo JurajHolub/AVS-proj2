@@ -5,7 +5,7 @@
  *
  * @brief   Parallel Marching Cubes implementation using pre-computed field
  *
- * @date    DATE
+ * @date    December 2020
  **/
 
 #ifndef CACHED_MESH_BUILDER_H
@@ -18,6 +18,7 @@ class CachedMeshBuilder : public BaseMeshBuilder
 {
 public:
     CachedMeshBuilder(unsigned gridEdgeSize);
+    ~CachedMeshBuilder();
 
 protected:
     unsigned marchCubes(const ParametricScalarField &field);
@@ -26,7 +27,8 @@ protected:
     const Triangle_t *getTrianglesArray() const { return mTriangles.data(); }
 
     std::vector<Triangle_t> mTriangles; ///< Temporary array of triangles
-    float *dist;
+    float *tempArray; ///< Temporary array of "evaluateFieldAtAllPositions()"
+    unsigned arrayDimension; ///< Size of one dimension for 3D array
 };
 
 #endif // CACHED_MESH_BUILDER_H

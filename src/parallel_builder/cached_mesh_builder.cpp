@@ -5,7 +5,7 @@
  *
  * @brief   Parallel Marching Cubes implementation using pre-computed field
  *
- * @date    DATE
+ * @date    December 2020
  **/
 
 #include <iostream>
@@ -22,10 +22,11 @@ CachedMeshBuilder::CachedMeshBuilder(unsigned gridEdgeSize)
 
 unsigned CachedMeshBuilder::marchCubes(const ParametricScalarField &field)
 {
+    // create temp array and evaluate field at all positions
+    arrayDimension = mGridSize+1;
+    tempArray = new float[arrayDimension * arrayDimension * arrayDimension];
     const Vec3_t<float> *pPoints = field.getPoints().data();
     const unsigned count = unsigned(field.getPoints().size());
-
-    dist = new float[(mGridSize+1)*(mGridSize+1)*(mGridSize+1)];
 
     #pragma omp parallel for collapse(3)
     for (int x = 0; x < mGridSize+1; ++x) {
@@ -39,7 +40,7 @@ unsigned CachedMeshBuilder::marchCubes(const ParametricScalarField &field)
                     distanceSquared       += (z*mGridResolution - pPoints[j].z) * (z*mGridResolution - pPoints[j].z);
                     value = std::min(value, distanceSquared);
                 }
-                dist[x*(mGridSize+1)*(mGridSize+1)+y*(mGridSize+1)+z] = sqrt(value);
+                tempArray[x * arrayDimension * arrayDimension + y * arrayDimension + z] = sqrt(value);
             }
         }
     }
@@ -56,8 +57,7 @@ unsigned CachedMeshBuilder::marchCubes(const ParametricScalarField &field)
         totalTriangles += buildCube(cubeOffset, field);
     }
 
-    delete dist;
-
+    delete tempArray;
     return totalTriangles;
 }
 
@@ -67,7 +67,7 @@ float CachedMeshBuilder::evaluateFieldAt(const Vec3_t<float> &pos, const Paramet
     unsigned y = pos.y/mGridResolution+0.5;
     unsigned z = pos.z/mGridResolution+0.5;
 
-    return dist[x*(mGridSize+1)*(mGridSize+1)+y*(mGridSize+1)+z];
+    return tempArray[x * arrayDimension * arrayDimension + y * arrayDimension + z];
 }
 
 void CachedMeshBuilder::emitTriangle(const BaseMeshBuilder::Triangle_t &triangle)
