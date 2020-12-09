@@ -18,7 +18,6 @@ class CachedMeshBuilder : public BaseMeshBuilder
 {
 public:
     CachedMeshBuilder(unsigned gridEdgeSize);
-    ~CachedMeshBuilder();
 
 protected:
     unsigned marchCubes(const ParametricScalarField &field);
